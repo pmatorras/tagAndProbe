@@ -15,12 +15,12 @@ datamc = sys.argv[1]
 year   = sys.argv[2].replace("20","")
 lep    = sys.argv[3]
 ylong  = "20"+year
-fol_name = ''
+fol_name = '/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
 
 if "e" in lep.lower(): lep = "Ele"
 if "m" in lep.lower(): lep = "Muon"
-if "data" in datamc.lower(): fol_name = "Run"+ylong+"_UL"+ylong+"_nAODv8_Full"+ylong+"v8/DataTandP__addTnP"+lep+"/"
-elif "mc" in datamc.lower(): fol_name = "Summer20UL"+year+"_106x_nAODv8_Full"+ylong+"v8/MCTandP__addTnP"+lep+"/"
+if "data" in datamc.lower(): fol_name += "Run"+ylong+"_UL"+ylong+"_nAODv8_Full"+ylong+"v8/DataTandP__addTnP"+lep+"/"
+elif "mc" in datamc.lower(): fol_name += "Summer20UL"+year+"_106x_nAODv8_Full"+ylong+"v8/MCTandP__addTnP"+lep+"/"
 if len(sys.argv)==4 :
     if "data" in datamc.lower():
         if lep is "Ele": hfilenm  = fol_name+ "nanoLatino_SingleElectron_Run2017B-UL2017-v1__part0.root"
@@ -35,7 +35,7 @@ print fol_name, hfilenm
 hfile   = TFile(hfilenm,"READ","Example");
 
 events = hfile.Get("Events")
-nEntries =  10000#events.GetEntries()
+nEntries =  1000#events.GetEntries()
 #nEntries =  events.GetEntries()
 
 ptcut    = 20
@@ -63,7 +63,7 @@ for i in range(0, nEntries):
         if lep_cut !=1: continue
     Ncutb    += 1
 
-    #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D, lep_lostH, lep_cutB
+    #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D#, lep_lostH, lep_cutB
 
     if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
     if lep_dxy   > dxycut or lep_dz       > dzcut : continue
@@ -74,7 +74,7 @@ for i in range(0, nEntries):
         if   lep_pt == events.Electron_pt[0] : eveHit = 0
         elif lep_pt == events.Electron_pt[1] : eveHit = 1
         lep_lostH = events.Electron_lostHits[eveHit]
-        
+        print events.Electron_lostHits[0], events.Electron_lostHits[1], events.Tag_lostHits
         if lep_lostH != 0 :                      continue
     elif lep is "Muon":
         if events.Probe_miniPFRelIso_all > 0.15: continue
