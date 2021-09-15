@@ -46,7 +46,7 @@ def makeSubFile2(filename,folder,arguments, sample, fileloc):#year,tag,sigset,fi
     f = open(filename,"w+")
     jobsent   = ' $(' +sample+ ')'
     #print "creating "+filename+" \t ARGUMENTS:\n ",arguments, "\n"                            
-    f.write("executable            = "+PWD+"loop.py \n")
+    f.write("executable            = "+PWD+"run_loop.py \n")
     f.write("arguments             = "+arguments+jobsent+"\n")
     f.write("output                = "+folder+"/"+sample+"/job.$(Process).out\n")
     f.write("error                 = "+folder+"/"+sample+"/job.$(Process).err\n")
@@ -65,7 +65,7 @@ logfile     = jobfolder + '/log_'+sample+".log"
 subfilename = jobfolder + '/sub_'+sample+".sub"
 flistname   = jobfolder+'/joblist' +sample+'.txt'
 
-os.system("ls "+fol_name+">> "+flistname)
+print "Creating list of samples", os.system("ls "+fol_name+">> "+flistname)
 os.system("mkdir -p "+jobfolder+"/"+sample)
 logtitle(logfile,"fileset")
 logline =   "Input arguments:\t"+ arguments 
@@ -75,7 +75,7 @@ writetolog(logfile, logline)
 
 
 makeSubFile2(subfilename,jobfolder, arguments, sample, flistname)# , "fileset","doDC",lognm)  
-commandtorun = "condor_submit "+subfilename+">>"+logfile
+commandtorun = "condor_submit "+subfilename+" >> "+logfile
 
 
 os.system(commandtorun)

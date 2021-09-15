@@ -1,11 +1,13 @@
-from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree
-
+print "starting the code"
 
 #!/usr/bin/env python                                                                   
 import optparse
 import sys, os
 cmsenv = ' eval `scramv1 runtime -sh` '
-#optim  = '/afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/'
+os.system(cmsenv)
+print os.system("which root")
+from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree
+from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
 
 if len(sys.argv)<4:
     print 'Please, specify Sample, number of events and file location, in that order'
@@ -34,9 +36,11 @@ else :
 print fol_name, hfilenm
 hfile   = TFile(hfilenm,"READ","Example");
 
+
+
 events = hfile.Get("Events")
-nEntries =  1000#events.GetEntries()
-#nEntries =  events.GetEntries()
+#nEntries =  1000#events.GetEntries()
+nEntries =  events.GetEntries()
 
 ptcut    = 20
 if lep is "Muon": ptcut=15
@@ -50,16 +54,30 @@ Nallcuts = 0
 for i in range(0, nEntries):
     #print events.HLT_PFJet200
     events.GetEntry(i)
-    lep_pt    = events.Probe_pt
-    lep_eta   = events.Probe_eta
-    lep_sip3D = events.Probe_sip3d
-    lep_dxy   = events.Probe_dxy
-    lep_dz    = events.Probe_dz
+    if lep is "Muon": 
+        leptons = Collection(events, lep)
+        nlep    = events.nMuon
+    else:             
+        leptons = Collection(events, 'Electron')
+        nlep    = events.nElectron
+    
+    eveHit    = -1
+    for ilep in range(0,nlep):
+        if leptons[ilep].pt == events.Probe_pt: eveHit = ilep
+    if eveHit == -1:
+        print "no match, continue"
+        continue
+    lep_pt    = leptons[eveHit].pt
+    lep_pt    = leptons[eveHit].pt
+    lep_eta   = leptons[eveHit].eta
+    lep_sip3D = leptons[eveHit].sip3d
+    lep_dxy   = leptons[eveHit].dxy
+    lep_dz    = leptons[eveHit].dz
     if   lep is "Ele" :
-        lep_cut  = events.Probe_cutBased
+        lep_cut  = leptons[eveHit].cutBased
         if lep_cut  < 3:                               continue
     elif lep is "Muon":
-        lep_cut  = events.Probe_mediumId
+        lep_cut  = leptons[eveHit].mediumId
         if lep_cut !=1: continue
     Ncutb    += 1
 
@@ -68,20 +86,15 @@ for i in range(0, nEntries):
     if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
     if lep_dxy   > dxycut or lep_dz       > dzcut : continue
     if lep_sip3D < sip3Dcut:                        continue
-
     if lep is "Ele":
-        eveHit = -1
-        if   lep_pt == events.Electron_pt[0] : eveHit = 0
-        elif lep_pt == events.Electron_pt[1] : eveHit = 1
-        lep_lostH = events.Electron_lostHits[eveHit]
-        print events.Electron_lostHits[0], events.Electron_lostHits[1], events.Tag_lostHits
+        lep_lostH = leptons[eveHit].lostHits
         if lep_lostH != 0 :                      continue
     elif lep is "Muon":
-        if events.Probe_miniPFRelIso_all > 0.15: continue
+        if leptons[eveHit].miniPFRelIso_all > 0.15: continue
 
     Nallcuts += 1
-    #print i,":", events.event,
+    #print i,":", leptons.event,
     #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D, lep_cut
-    #print events.Probe_miniPFRelIso_all
+    #print leptons[eveHit].miniPFRelIso_all
 
 print "Cut based:\t",Ncutb,"\nAll cuts:\t",Nallcuts
