@@ -15,7 +15,7 @@ datamc = sys.argv[1]
 year   = sys.argv[2].replace("20","")
 lep    = sys.argv[3]
 ylong  = "20"+year
-fol_name = '/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
+fol_name = ''#/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
 
 if "e" in lep.lower(): lep = "Ele"
 if "m" in lep.lower(): lep = "Muon"
