@@ -20,7 +20,7 @@ else:
 
 print os.system("which root")
 from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree
-#from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
+from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
 
 if len(sys.argv)<4:
     print 'Please, specify Sample, number of events and file location, in that order'
@@ -76,7 +76,7 @@ print "Initialising loop...."
 for i in range(0, nEntries):
     #print events.HLT_PFJet200
     events.GetEntry(i)
-    if lep is "Muon": 
+    if lep is "Muon":
         leptons = Collection(events, lep)
         nlep    = events.nMuon
     else:             
