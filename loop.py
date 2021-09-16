@@ -5,7 +5,11 @@ from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirector
 import optparse
 import sys, os
 cmsenv = ' eval `scramv1 runtime -sh` '
-#optim  = '/afs/cern.ch/work/p/pmatorra/private/CMSSW_10_2_14/src/Optimisecuts/'
+user   = os.getenv("USER")
+if "pablinux" in user: fol_name = ""
+else:  fol_name = '/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
+
+exit()
 
 if len(sys.argv)<4:
     print 'Please, specify Sample, number of events and file location, in that order'
@@ -15,7 +19,7 @@ datamc = sys.argv[1]
 year   = sys.argv[2].replace("20","")
 lep    = sys.argv[3]
 ylong  = "20"+year
-fol_name = ''#/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
+
 
 if "e" in lep.lower(): lep = "Ele"
 if "m" in lep.lower(): lep = "Muon"
