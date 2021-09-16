@@ -99,11 +99,10 @@ for i in range(0, nEntries):
         lep_cut = events.Probe_cutBased
         if lep_cut  < 3:                               continue
     elif lep is "Muon":
-        lep_cut  = leptons[eveHit].cutBased
-        if lep_cut  < 3:                               continue
-    elif lep is "Muon":
         lep_cut  = leptons[eveHit].mediumId
         if lep_cut !=1: continue
+        if leptons[eveHit].miniPFRelIso_all > 0.15: continue
+
     Ncutb    += 1
     hcutBase.Fill(lep_eta, lep_pt,1)
     
@@ -113,14 +112,8 @@ for i in range(0, nEntries):
     if lep_dxy   > dxycut or lep_dz       > dzcut : continue
     if lep_sip3D < sip3Dcut:                        continue
     if lep is "Ele":
-        eveHit = -1
-        if   lep_pt == events.Electron_pt[0] : eveHit = 0
-        elif lep_pt == events.Electron_pt[1] : eveHit = 1
         lep_lostH = leptons[eveHit].lostHits
         if lep_lostH != 0 :                      continue
-    elif lep is "Muon":
-        if leptons[eveHit].miniPFRelIso_all > 0.15: continue
-
     Nallcuts += 1
     hallcuts.Fill(lep_eta, lep_pt,1)
 
