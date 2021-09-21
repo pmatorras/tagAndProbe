@@ -1,9 +1,14 @@
-from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree, TH2D
+from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree, TH2D, TH1D
+from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
+
 print "starting the code"
 #!/usr/bin/env python       
 import optparse
 import sys, os
 import numpy as np
+
+
+
 cmsenv = ' eval `scramv1 runtime -sh` '
 user   = os.getenv("USER")
 xEdges = np.array([ -2.5, -2.0, -1.566, -1.444, -0.8, 0.0, 0.8, 1.444, 1.566, 2.0, 2.5], dtype = 'double')
@@ -18,8 +23,6 @@ else:
     os.system(cmsenv)
 
 
-from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree
-from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
 
 if len(sys.argv)<4:
     print 'Please, specify Sample, number of events and file location, in that order'
@@ -49,17 +52,18 @@ if len(sys.argv)==4 :
         samplenm = "nanoLatino_DYJetsToLL_M-50_LO__part0.root"
 else :
     samplenm  = sys.argv[4]
-
+isNLO = False
+if "mc" in datamc.lower() and "_LO_" not in samplenm: isNLO=True
 sample    =  datamc+year+lep
 sampleloc = fol_name+samplenm
-outputnm  = "Output/"+sample+"/output_"+samplenm+".root"
+outputnm  = "Output/"+sample+"/output_"+samplenm
 
 os.system("mkdir -p Output/"+sample) 
 hsample   = TFile(sampleloc,"READ","input_file")
 foutput   = TFile(outputnm, "RECREATE", "output_file")
 events    = hsample.Get("Events")
 nEntries  = 1000
-#nEntries =  events.GetEntries()
+#nEntries  =  events.GetEntries()
 ptcut     = 20
 if lep is "Muon": ptcut = 15
 etacut    = 2.4
@@ -71,23 +75,37 @@ all_syst  = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": 
              "Both" : {"central" : "" ,"TnP_MET30": 30 , "TnP_MET50" : 50, "nojet" : 0}}
 jetlcuts  = {"2016HIPM" : 0.2027 , "2020noHIPM": 0.1918, "2017" : 0.1355, "2018":0.1208}
 jetlcut   = jetlcuts[year]
-print "jetlcut" 
+PUweights = np.loadtxt("PUfiles/PileUpWeights_DiJet20_QCDMu_PSRun2017UL17.txt", comments="#", delimiter=" ", unpack=False)
 lep_syst  = dict(all_syst[lep], **all_syst["Both"])
+if isNLO: lep_syst = {"central" :""}
 for syst in lep_syst:
+    if lep is "Muon":
+        lepnm    = lep
+        if "TnP_m" in syst:
+            min_mass = lep_syst[syst][0]
+            max_mass = lep_syst[syst][1]
+        else:
+            min_mass =  70
+            max_mass = 130
+    else:
+        lepnm    = "Electron"
+        min_mass =  60
+        max_mass = 120
+
     Ncutb     = 0
     Nallcuts  = 0
-    hbasecuts = TH2D(sample+"base"+syst, sample+"base cuts, "+syst,  nbinX, xEdges, nbinY, yEdges)
-    hallcuts  = TH2D(sample+"all" +syst, sample+"all cuts, " +syst,  nbinX, xEdges, nbinY, yEdges)
+    hbasecuts = TH2D(sample+"base" +syst, sample+"base cuts, "  +syst,  nbinX, xEdges, nbinY, yEdges)
+    hallcuts  = TH2D(sample+"all"  +syst, sample+"all cuts, "   +syst,  nbinX, xEdges, nbinY, yEdges)
+    hbasemass = TH1D(sample+"baseM"+syst, sample+"base cuts M, "+syst,  40, min_mass, max_mass)
+    hallmass  = TH1D(sample+"allM" +syst, sample+"all cuts M, " +syst,  40, min_mass, max_mass)
+
     print "considering syst", syst, "(",lep_syst[syst],")"
     for i in range(0, nEntries):
         #print events.HLT_PFJet200
         events.GetEntry(i)
-        if lep is "Muon":
-            leptons = Collection(events, lep)
-            nlep    = events.nMuon
-        else:             
-            leptons = Collection(events, 'Electron')
-            nlep    = events.nElectron
+        leptons = Collection(events, lepnm)
+        if lep is "Muon": nlep = events.nMuon
+        else:             nlep = events.nElectron
 
         #pick which lep is the corresponding to probe
         eveHit    = -1
@@ -107,22 +125,14 @@ for syst in lep_syst:
 
         if   lep is "Ele" :
             lep_cut  = events.Probe_cutBased
-            min_mass =  60
-            max_mass = 120
             if lep_cut < 3 : continue
         elif lep is "Muon" :
             lep_cut  = leptons[eveHit].mediumId
-            if "TnP_m" in syst:
-                min_mass = lep_syst[syst][0]
-                max_mass = lep_syst[syst][1]
-            else:
-                min_mass =  70
-                max_mass = 130
             if lep_cut !=1                            : continue
             if leptons[eveHit].miniPFRelIso_all > 0.15: continue
             if leptons[eveHit].pfRelIso04_all   > 0.2 : continue
 
-        #if len([x for x in events.Jet_btagDeepB if x > jetlcut])>0: continue
+        if len([x for x in events.Jet_btagDeepB if x > jetlcut])>0: continue
         if events.TnP_trigger ==0:                                  continue
         if tnp_mass< min_mass or tnp_mass>max_mass:                 continue
         
@@ -132,8 +142,10 @@ for syst in lep_syst:
         if "tagMu" in syst and leptons[eveHit].pfRelIso04_all>lep_syst[syst] : continue
 
         Ncutb    += 1
-        hbasecuts.Fill(lep_eta, lep_pt,1)
-
+        weight    =  PUweights[int(events.Pileup_nTrueInt),1]
+        hbasecuts.Fill(lep_eta, lep_pt,weight)
+        hbasemass.Fill(tnp_mass, weight)
+        
         #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D#, lep_lostH, lep_cutB
 
         if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
@@ -143,8 +155,13 @@ for syst in lep_syst:
             lep_lostH = leptons[eveHit].lostHits
             if lep_lostH != 0 :                      continue
         Nallcuts += 1
-        hallcuts.Fill(lep_eta, lep_pt,1)
-
+        hallcuts.Fill(lep_eta, lep_pt,weight)
+        hallmass.Fill(tnp_mass, weight)
+        
     print "Cut based:\t",Ncutb,"\nAll cuts:\t",Nallcuts
-    hallcuts.Write()
+    
     hbasecuts.Write()
+    hbasemass.Write()
+    hallcuts.Write()
+    hallmass.Write()
+    

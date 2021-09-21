@@ -44,7 +44,8 @@ def makeSubFile2(filename,folder,arguments, sample, fileloc):#year,tag,sigset,fi
 alltypes = ["data", "mc"]
 allyears = ["2016", "2017", "2018"]  
 allLeps  = ["Ele" , "Muon"]
-
+NLO      = ''
+LO       = '' 
 
 if len(sys.argv)<4:
     if "all" in sys.argv[-1]:
@@ -66,7 +67,8 @@ else:
     else: years   = years.split("_")
     if "all" in    leps.lower(): leps    = allLeps
     else: leps    = leps.split("_")
-
+    if len(sys.argv)>4:
+        if "nlo" in sys.argv[4]: NLO="NLO"
 
 for datamc in datamcs:
     for year in years:
@@ -81,18 +83,19 @@ for datamc in datamcs:
                 if "m" in lep.lower(): lep = "Muon"
                 if "data" in datamc.lower(): 
                     fol_name = fol_base + "Run"+year+"_UL"+year +   "_nAODv8"+hipm+"_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
-                    LO       = '' 
                 elif "mc" in datamc.lower(): 
                     fol_name = fol_base + "Summer20UL"+ yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
-                    LO       = "*LO*"
+                    if 'NLO'  in NLO : LO = "*50__part*"
+                    else             : LO = "*LO*"
                 arguments   = datamc+" "+year+" "+lep
-                sample      = arguments.replace(" ","")
+                sample      = arguments.replace(" ","")+NLO
                 jobfolder   = "./Condor"
                 logfile     = jobfolder + '/log_'+sample+".log"
                 subfilename = jobfolder + '/sub_'+sample+".sub"
                 flistname   = jobfolder+'/joblist' +sample+'.txt'
                 os.system("mkdir -p "+jobfolder+"/"+sample)
-                print os.system("ls "+fol_name+LO)
+                print os.system("ls "+fol_name+LO), "ls "+ fol_name+LO
+                os.system('rm -f '+flistname)
                 os.system("ls "+fol_name+LO+">> "+flistname)
                 logtitle(logfile,"fileset")
                 logline =   "Input arguments:\t"+ arguments 
@@ -105,7 +108,7 @@ for datamc in datamcs:
                 commandtorun = "condor_submit "+subfilename+" >> "+logfile
 
 
-                #os.system(commandtorun)
+                os.system(commandtorun)
                 print "jobs sent:\n", commandtorun
                 writetolog(logfile,"----------------------------------")
                 print "LIMITS SENT\nlog file:\t"+logfile,"\nsub file:\t"+subfilename,"\njob list:\t"+flistname
