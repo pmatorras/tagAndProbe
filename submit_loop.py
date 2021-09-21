@@ -62,11 +62,11 @@ else:
     leps    = sys.argv[3]
 
     if "all" in datamcs.lower(): datamcs = alltypes
-    else: datamcs = datamcs.split('_')
+    else: datamcs = datamcs.split('-')
     if "all" in years.lower()  : years   = allyears
-    else: years   = years.split("_")
+    else: years   = years.split("-")
     if "all" in    leps.lower(): leps    = allLeps
-    else: leps    = leps.split("_")
+    else: leps    = leps.split("-")
     if len(sys.argv)>4:
         if "nlo" in sys.argv[4]: NLO="NLO"
 
@@ -87,14 +87,14 @@ for datamc in datamcs:
                     fol_name = fol_base + "Summer20UL"+ yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
                     if 'NLO'  in NLO : LO = "*50__part*"
                     else             : LO = "*LO*"
-                arguments   = datamc+" "+year+" "+lep
+                arguments   = datamc+" "+year+hipm+" "+lep
                 sample      = arguments.replace(" ","")+NLO
                 jobfolder   = "./Condor"
                 logfile     = jobfolder + '/log_'+sample+".log"
                 subfilename = jobfolder + '/sub_'+sample+".sub"
                 flistname   = jobfolder+'/joblist' +sample+'.txt'
                 os.system("mkdir -p "+jobfolder+"/"+sample)
-                print os.system("ls "+fol_name+LO), "ls "+ fol_name+LO
+                #print os.system("ls "+fol_name+LO), "ls "+ fol_name+LO
                 os.system('rm -f '+flistname)
                 os.system("ls "+fol_name+LO+">> "+flistname)
                 logtitle(logfile,"fileset")

@@ -15,6 +15,7 @@ xEdges = np.array([ -2.5, -2.0, -1.566, -1.444, -0.8, 0.0, 0.8, 1.444, 1.566, 2.
 yEdges = np.array([   10,   20,     35,     50,  100, 200], dtype ='double')
 nbinX  = len(xEdges)-1
 nbinY  = len(yEdges)-1
+hipms  = ["_noHIPM", "_HIPM"]
 
 if "pablinux" in user:
     fol_name = ""
@@ -29,20 +30,15 @@ if len(sys.argv)<4:
     sys.exit()
 
 datamc = sys.argv[1]
-yshort = sys.argv[2].replace("20","")
+year   = sys.argv[2]
 lep    = sys.argv[3]
-year   = "20"+yshort
 
 if   "e" in lep.lower(): lep = "Ele"
 elif "m" in lep.lower(): lep = "Muon"
 else: 
     print "wrong lepton input\n exiting"
     exit()
-if "data" in datamc.lower(): fol_name += "Run"+year+"_UL"+year+"_nAODv8_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
-elif "mc" in datamc.lower(): fol_name += "Summer20UL"+yshort+"_106x_nAODv8_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
-else:
-    print "pick either data or mc\n exiting"
-    exit()
+
 if len(sys.argv)==4 :
     if "data" in datamc.lower():
         if lep is "Ele": samplenm  = "nanoLatino_SingleElectron_Run2017B-UL2017-v1__part0.root"
@@ -52,32 +48,60 @@ if len(sys.argv)==4 :
         samplenm = "nanoLatino_DYJetsToLL_M-50_LO__part0.root"
 else :
     samplenm  = sys.argv[4]
-isNLO = False
-if "mc" in datamc.lower() and "_LO_" not in samplenm: isNLO=True
+hipm =''
+if "16" in year:
+    if "noHIPM" in year: 
+        hipm = "_noHIPM"
+        year = year.replace("_noHIPM", "")
+    else:                
+        hipm = "_HIPM"
+        year = year.replace("_HIPM", "")
+
+yshort   = year.replace("20","")
+
+if "data" in datamc.lower() : fol_name += "Run"+year+"_UL"+year+"_nAODv8"+hipm+"_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
+elif "mc" in datamc.lower() : fol_name += "Summer20UL"+yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
+elif "data" not in datamc.lower() and "mc" not in datamc.lower():
+    print "pick either data or mc\n exiting"
+    exit()
+
+
+NLOstr    = 'LO'
+isNLO     = False
+all_syst  = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": "NLO"},
+             "Muon" : {"tagMu1"  : 0.1,"tagMu3"   : 0.3, "TnP_m1": [75,140], "TnP_m2" : [65,120]},
+             "Both" : {"central" : "" ,"TnP_MET30": 30 , "TnP_MET50" : 50, "nojet" : 0}}
+jetlcuts  = {"2016_HIPM" : 0.2027 , "2016_noHIPM": 0.1918, "2017" : 0.1355, "2018":0.1208}
+jetlcut   = jetlcuts[year+hipm]
+if "16" in year:
+    apv = 'APV'
+    if "NOHIPM" in year: apv=''
+    PUweights = np.loadtxt("PUfiles/PileUpWeights_DiJet20_QCDMu_PSRun2016UL16"+apv+".txt", comments="#", delimiter=" ", unpack=False)
+else:
+    PUweights = np.loadtxt("PUfiles/PileUpWeights_DiJet20_QCDMu_PSRun"+year+"UL"+yshort+".txt", comments="#", delimiter=" ", unpack=False)
+lep_syst  = dict(all_syst[lep], **all_syst["Both"])
+
+if "mc" in datamc.lower() and "_LO_" not in samplenm: 
+    isNLO    = True
+    lep_syst = {"central" :""}
+    NLOstr   = "NLO"
 sample    =  datamc+year+lep
 sampleloc = fol_name+samplenm
-outputnm  = "Output/"+sample+"/output_"+samplenm
-
-os.system("mkdir -p Output/"+sample) 
+outputfol = "Output/"+sample+NLOstr+hipm
+outputnm  = outputfol+"/output_"+samplenm
+print " sample ",sampleloc, "being used"
+os.system("mkdir -p "+outputfol) 
 hsample   = TFile(sampleloc,"READ","input_file")
 foutput   = TFile(outputnm, "RECREATE", "output_file")
 events    = hsample.Get("Events")
-nEntries  = 1000
-#nEntries  =  events.GetEntries()
+#nEntries  = 1000
+nEntries  =  events.GetEntries()
 ptcut     = 20
 if lep is "Muon": ptcut = 15
 etacut    = 2.4
 sip3Dcut  = 4
 dxycut    = 0.05
 dzcut     = 0.1
-all_syst  = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": "NLO"},
-             "Muon" : {"tagMu1"  : 0.1,"tagMu3"   : 0.3, "TnP_m1": [75,140], "TnP_m2" : [65,120]},
-             "Both" : {"central" : "" ,"TnP_MET30": 30 , "TnP_MET50" : 50, "nojet" : 0}}
-jetlcuts  = {"2016HIPM" : 0.2027 , "2020noHIPM": 0.1918, "2017" : 0.1355, "2018":0.1208}
-jetlcut   = jetlcuts[year]
-PUweights = np.loadtxt("PUfiles/PileUpWeights_DiJet20_QCDMu_PSRun2017UL17.txt", comments="#", delimiter=" ", unpack=False)
-lep_syst  = dict(all_syst[lep], **all_syst["Both"])
-if isNLO: lep_syst = {"central" :""}
 for syst in lep_syst:
     if lep is "Muon":
         lepnm    = lep

@@ -7,7 +7,7 @@ datamc = sys.argv[1]
 year   = sys.argv[2]
 lep    = sys.argv[3]
 sample = ''
-if (len(sys.argv)>4): sample = sys.argv[4]
+if (len(sys.argv)>4): sample = sys.argv[4].split('/')[-1]
 cmsenv = ' eval `scramv1 runtime -sh` '
 pwd = os.getenv("PWD")
 print pwd
