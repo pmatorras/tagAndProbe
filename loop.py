@@ -18,7 +18,6 @@ else:
     os.system(cmsenv)
 
 
-print os.system("which root")
 from ROOT import TCanvas, TPad, TFile, TPaveLabel, TPaveText, TLegend, gDirectory, TTree
 from PhysicsTools.NanoAODTools.postprocessing.framework.datamodel import Collection
 
@@ -27,15 +26,20 @@ if len(sys.argv)<4:
     sys.exit()
 
 datamc = sys.argv[1]
-year   = sys.argv[2].replace("20","")
+yshort = sys.argv[2].replace("20","")
 lep    = sys.argv[3]
-ylong  = "20"+year
-sample =  datamc+ylong+lep
+year   = "20"+yshort
 
-if "e" in lep.lower(): lep = "Ele"
-if "m" in lep.lower(): lep = "Muon"
-if "data" in datamc.lower(): fol_name += "Run"+ylong+"_UL"+ylong+"_nAODv8_Full"+ylong+"v8/DataTandP__addTnP"+lep+"/"
-elif "mc" in datamc.lower(): fol_name += "Summer20UL"+year+"_106x_nAODv8_Full"+ylong+"v8/MCTandP__addTnP"+lep+"/"
+if   "e" in lep.lower(): lep = "Ele"
+elif "m" in lep.lower(): lep = "Muon"
+else: 
+    print "wrong lepton input\n exiting"
+    exit()
+if "data" in datamc.lower(): fol_name += "Run"+year+"_UL"+year+"_nAODv8_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
+elif "mc" in datamc.lower(): fol_name += "Summer20UL"+yshort+"_106x_nAODv8_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
+else:
+    print "pick either data or mc\n exiting"
+    exit()
 if len(sys.argv)==4 :
     if "data" in datamc.lower():
         if lep is "Ele": samplenm  = "nanoLatino_SingleElectron_Run2017B-UL2017-v1__part0.root"
@@ -45,78 +49,102 @@ if len(sys.argv)==4 :
         samplenm = "nanoLatino_DYJetsToLL_M-50_LO__part0.root"
 else :
     samplenm  = sys.argv[4]
-os.system("mkdir -p Output/"+sample) 
 
-
+sample    =  datamc+year+lep
 sampleloc = fol_name+samplenm
 outputnm  = "Output/"+sample+"/output_"+samplenm+".root"
-hsample   = TFile(sampleloc,"READ","Example")
+
+os.system("mkdir -p Output/"+sample) 
+hsample   = TFile(sampleloc,"READ","input_file")
+foutput   = TFile(outputnm, "RECREATE", "output_file")
 events    = hsample.Get("Events")
 nEntries  = 1000
 #nEntries =  events.GetEntries()
-foutput   = TFile(outputnm, "RECREATE", "output_file")
-hcutBase  = TH2D(sample+"base", sample+"base",  nbinX, xEdges, nbinY, yEdges)
-hallcuts  = TH2D(sample+"all" , sample+"all" ,  nbinX, xEdges, nbinY, yEdges)
 ptcut     = 20
-
-
-events = hsample.Get("Events")
-#nEntries =  1000#events.GetEntries()
-nEntries =  events.GetEntries()
-
-ptcut    = 20
 if lep is "Muon": ptcut = 15
 etacut    = 2.4
 sip3Dcut  = 4
 dxycut    = 0.05
 dzcut     = 0.1
-Ncutb     = 0
-Nallcuts  = 0
-print "Initialising loop...."
-for i in range(0, nEntries):
-    #print events.HLT_PFJet200
-    events.GetEntry(i)
-    if lep is "Muon":
-        leptons = Collection(events, lep)
-        nlep    = events.nMuon
-    else:             
-        leptons = Collection(events, 'Electron')
-        nlep    = events.nElectron
-    
-    eveHit    = -1
-    for ilep in range(0,nlep):
-        if leptons[ilep].pt == events.Probe_pt: eveHit = ilep
-    if eveHit == -1:
-        print "no match, continue"
-        continue
-    lep_pt    = leptons[eveHit].pt
-    lep_pt    = leptons[eveHit].pt
-    lep_eta   = leptons[eveHit].eta
-    lep_sip3D = leptons[eveHit].sip3d
-    lep_dxy   = leptons[eveHit].dxy
-    lep_dz    = leptons[eveHit].dz
-    if   lep is "Ele" :
-        lep_cut = events.Probe_cutBased
-        if lep_cut  < 3:                               continue
-    elif lep is "Muon":
-        lep_cut  = leptons[eveHit].mediumId
-        if lep_cut !=1: continue
-        if leptons[eveHit].miniPFRelIso_all > 0.15: continue
+all_syst  = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": "NLO"},
+             "Muon" : {"tagMu1"  : 0.1,"tagMu3"   : 0.3, "TnP_m1": [75,140], "TnP_m2" : [65,120]},
+             "Both" : {"central" : "" ,"TnP_MET30": 30 , "TnP_MET50" : 50, "nojet" : 0}}
+jetlcuts  = {"2016HIPM" : 0.2027 , "2020noHIPM": 0.1918, "2017" : 0.1355, "2018":0.1208}
+jetlcut   = jetlcuts[year]
+print "jetlcut" 
+lep_syst  = dict(all_syst[lep], **all_syst["Both"])
+for syst in lep_syst:
+    Ncutb     = 0
+    Nallcuts  = 0
+    hbasecuts = TH2D(sample+"base"+syst, sample+"base cuts, "+syst,  nbinX, xEdges, nbinY, yEdges)
+    hallcuts  = TH2D(sample+"all" +syst, sample+"all cuts, " +syst,  nbinX, xEdges, nbinY, yEdges)
+    print "considering syst", syst, "(",lep_syst[syst],")"
+    for i in range(0, nEntries):
+        #print events.HLT_PFJet200
+        events.GetEntry(i)
+        if lep is "Muon":
+            leptons = Collection(events, lep)
+            nlep    = events.nMuon
+        else:             
+            leptons = Collection(events, 'Electron')
+            nlep    = events.nElectron
 
-    Ncutb    += 1
-    hcutBase.Fill(lep_eta, lep_pt,1)
-    
-    #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D#, lep_lostH, lep_cutB
+        #pick which lep is the corresponding to probe
+        eveHit    = -1
+        for ilep in range(0,nlep):
+            if leptons[ilep].pt == events.Probe_pt: eveHit = ilep
+        if eveHit == -1:
+            print "no match, continue"
+            continue
 
-    if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
-    if lep_dxy   > dxycut or lep_dz       > dzcut : continue
-    if lep_sip3D < sip3Dcut:                        continue
-    if lep is "Ele":
-        lep_lostH = leptons[eveHit].lostHits
-        if lep_lostH != 0 :                      continue
-    Nallcuts += 1
-    hallcuts.Fill(lep_eta, lep_pt,1)
+        lep_pt    = leptons[eveHit].pt
+        lep_pt    = leptons[eveHit].pt
+        lep_eta   = leptons[eveHit].eta
+        lep_sip3D = leptons[eveHit].sip3d
+        lep_dxy   = leptons[eveHit].dxy
+        lep_dz    = leptons[eveHit].dz
+        tnp_mass  = events.TnP_mass
 
-print "Cut based:\t",Ncutb,"\nAll cuts:\t",Nallcuts
-hallcuts.Write()
-hcutBase.Write()
+        if   lep is "Ele" :
+            lep_cut  = events.Probe_cutBased
+            min_mass =  60
+            max_mass = 120
+            if lep_cut < 3 : continue
+        elif lep is "Muon" :
+            lep_cut  = leptons[eveHit].mediumId
+            if "TnP_m" in syst:
+                min_mass = lep_syst[syst][0]
+                max_mass = lep_syst[syst][1]
+            else:
+                min_mass =  70
+                max_mass = 130
+            if lep_cut !=1                            : continue
+            if leptons[eveHit].miniPFRelIso_all > 0.15: continue
+            if leptons[eveHit].pfRelIso04_all   > 0.2 : continue
+
+        #if len([x for x in events.Jet_btagDeepB if x > jetlcut])>0: continue
+        if events.TnP_trigger ==0:                                  continue
+        if tnp_mass< min_mass or tnp_mass>max_mass:                 continue
+        
+        if "MET"   in syst and events.TnP_met>lep_syst[syst]                 : continue
+        if "WP90"  in syst and leptons[eveHit].mvaFall17V2Iso_WP90<1         : continue
+        if "nojet" in syst and leptons[eveHit].jetIdx <1                     : continue
+        if "tagMu" in syst and leptons[eveHit].pfRelIso04_all>lep_syst[syst] : continue
+
+        Ncutb    += 1
+        hbasecuts.Fill(lep_eta, lep_pt,1)
+
+        #print lep_pt, lep_eta, lep_dxy, lep_dz, lep_sip3D#, lep_lostH, lep_cutB
+
+        if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
+        if lep_dxy   > dxycut or lep_dz       > dzcut : continue
+        if lep_sip3D < sip3Dcut:                        continue
+        if lep is "Ele":
+            lep_lostH = leptons[eveHit].lostHits
+            if lep_lostH != 0 :                      continue
+        Nallcuts += 1
+        hallcuts.Fill(lep_eta, lep_pt,1)
+
+    print "Cut based:\t",Ncutb,"\nAll cuts:\t",Nallcuts
+    hallcuts.Write()
+    hbasecuts.Write()

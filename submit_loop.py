@@ -79,8 +79,12 @@ for datamc in datamcs:
             for lep in leps:
                 if "e" in lep.lower(): lep = "Ele"
                 if "m" in lep.lower(): lep = "Muon"
-                if "data" in datamc.lower(): fol_name = fol_base + "Run"+year+"_UL"+year +   "_nAODv8"+hipm+"_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
-                elif "mc" in datamc.lower(): fol_name = fol_base + "Summer20UL"+ yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
+                if "data" in datamc.lower(): 
+                    fol_name = fol_base + "Run"+year+"_UL"+year +   "_nAODv8"+hipm+"_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
+                    LO       = '' 
+                elif "mc" in datamc.lower(): 
+                    fol_name = fol_base + "Summer20UL"+ yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
+                    LO       = "*LO*"
                 arguments   = datamc+" "+year+" "+lep
                 sample      = arguments.replace(" ","")
                 jobfolder   = "./Condor"
@@ -88,7 +92,8 @@ for datamc in datamcs:
                 subfilename = jobfolder + '/sub_'+sample+".sub"
                 flistname   = jobfolder+'/joblist' +sample+'.txt'
                 os.system("mkdir -p "+jobfolder+"/"+sample)
-                os.system("ls "+fol_name+">> "+flistname)
+                print os.system("ls "+fol_name+LO)
+                os.system("ls "+fol_name+LO+">> "+flistname)
                 logtitle(logfile,"fileset")
                 logline =   "Input arguments:\t"+ arguments 
                 logline+= "\nSample list    :\t"+ flistname
