@@ -10,5 +10,4 @@ sample = ''
 if (len(sys.argv)>4): sample = sys.argv[4].split('/')[-1]
 cmsenv = ' eval `scramv1 runtime -sh` '
 pwd = os.getenv("PWD")
-print pwd
 os.system("cd "+tagPro+"; "+cmsenv+ "; python loop.py "+ datamc+" "+year+" "+lep+" "+ sample)

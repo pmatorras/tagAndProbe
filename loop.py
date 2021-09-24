@@ -30,25 +30,9 @@ if len(sys.argv)<4:
     sys.exit()
 
 datamc = sys.argv[1]
-year   = sys.argv[2]
+year   = "20"+sys.argv[2].replace("20","")
 lep    = sys.argv[3]
-
-if   "e" in lep.lower(): lep = "Ele"
-elif "m" in lep.lower(): lep = "Muon"
-else: 
-    print "wrong lepton input\n exiting"
-    exit()
-
-if len(sys.argv)==4 :
-    if "data" in datamc.lower():
-        if lep is "Ele": samplenm  = "nanoLatino_SingleElectron_Run2017B-UL2017-v1__part0.root"
-        else: samplenm ="nanoLatino_SingleMuon_Run2017B-UL2017-v1__part0.root"
-
-    else:
-        samplenm = "nanoLatino_DYJetsToLL_M-50_LO__part0.root"
-else :
-    samplenm  = sys.argv[4]
-hipm =''
+hipm   = ''
 if "16" in year:
     if "noHIPM" in year: 
         hipm = "_noHIPM"
@@ -59,13 +43,30 @@ if "16" in year:
 
 yshort   = year.replace("20","")
 
+if   "e" in lep.lower(): lep = "Ele"
+elif "m" in lep.lower(): lep = "Muon"
+else: 
+    print "wrong lepton input\n exiting"
+    exit()
+
+if len(sys.argv)==4 :
+    if "data" in datamc.lower():
+        if lep is "Ele": samplenm  = "nanoLatino_SingleElectron_Run"+year+"B-UL"+year+"-v1__part0.root"
+        else:            samplenm  = "nanoLatino_SingleMuon_Run"+year+"B-UL"+year+"-v1__part0.root"
+
+    else:
+        if "16" in year: samplenm = "nanoLatino_DYJetsToLL_M-50-LO__part0.root"
+        else           : samplenm = "nanoLatino_DYJetsToLL_M-50_LO__part0.root"
+else :
+    samplenm  = sys.argv[4]
+
 if "data" in datamc.lower() : fol_name += "Run"+year+"_UL"+year+"_nAODv8"+hipm+"_Full"+year+"v8/DataTandP__addTnP"+lep+"/"
 elif "mc" in datamc.lower() : fol_name += "Summer20UL"+yshort+"_106x_nAODv8"+hipm+"_Full"+year+"v8/MCTandP__addTnP"+lep+"/"
 elif "data" not in datamc.lower() and "mc" not in datamc.lower():
     print "pick either data or mc\n exiting"
     exit()
 
-
+print "arguments", datamc, year, lep
 NLOstr    = 'LO'
 isNLO     = False
 all_syst  = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": "NLO"},
@@ -81,9 +82,9 @@ else:
     PUweights = np.loadtxt("PUfiles/PileUpWeights_DiJet20_QCDMu_PSRun"+year+"UL"+yshort+".txt", comments="#", delimiter=" ", unpack=False)
 lep_syst  = dict(all_syst[lep], **all_syst["Both"])
 
-if "mc" in datamc.lower() and "_LO_" not in samplenm: 
+if "mc" in datamc.lower() and "LO_" not in samplenm: 
     isNLO    = True
-    lep_syst = {"central" :""}
+    lep_syst = {"centralNLO" :""}
     NLOstr   = "NLO"
 sample    =  datamc+year+lep
 sampleloc = fol_name+samplenm
@@ -123,7 +124,7 @@ for syst in lep_syst:
     hbasemass = TH1D(sample+"baseM"+syst, sample+"base cuts M, "+syst,  40, min_mass, max_mass)
     hallmass  = TH1D(sample+"allM" +syst, sample+"all cuts M, " +syst,  40, min_mass, max_mass)
 
-    print "considering syst", syst, "(",lep_syst[syst],")"
+    print "considering syst", syst, ":",lep_syst[syst]
     for i in range(0, nEntries):
         #print events.HLT_PFJet200
         events.GetEntry(i)
@@ -166,7 +167,8 @@ for syst in lep_syst:
         if "tagMu" in syst and leptons[eveHit].pfRelIso04_all>lep_syst[syst] : continue
 
         Ncutb    += 1
-        weight    =  PUweights[int(events.Pileup_nTrueInt),1]
+        if "mc" in datamc: weight = PUweights[int(events.Pileup_nTrueInt),1]
+        else             : weight = 1
         hbasecuts.Fill(lep_eta, lep_pt,weight)
         hbasemass.Fill(tnp_mass, weight)
         
