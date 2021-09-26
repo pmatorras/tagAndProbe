@@ -30,18 +30,15 @@ def makeSubFile2(filename,folder,arguments, sample, fileloc):#year,tag,sigset,fi
     PWD = os.getenv('PWD')+'/'
     f = open(filename,"w+")
     jobsent   = ' $(' +sample+ ')'
+    jobnm     = '$(' +sample.replace('root','')+ ')'
     #print "creating "+filename+" \t ARGUMENTS:\n ",arguments, "\n"                            
     f.write("executable            = "+PWD+"run_loop.py \n")
     f.write("arguments             = "+arguments+jobsent+"\n")
-#    f.write("output                = "+folder+"/"+sample+"/job$(Process).out\n")
-#    f.write("error                 = "+folder+"/"+sample+"/job$(Process).err\n")
-#    f.write("log                   = "+folder+"/"+sample+"/job$(Process).log\n")
     f.write("output                = "+folder+"/"+sample+"/job"+jobsent+".out\n")
     f.write("error                 = "+folder+"/"+sample+"/job"+jobsent+".err\n")
-    f.write("log                   = "+folder+"/"+sample+"/job"+jobsent+".log\n")
-         
-    f.write("+JobFlavour           = workday\n")#testmatch\n")
-    #f.write("+JobFlavour           = tomorrow\n")                                             
+    f.write("log                   = "+folder+"/"+sample+"/job"+jobsent+".log\n")         
+    #f.write("+JobFlavour           = workday\n")
+    f.write("+JobFlavour           = tomorrow\n")                                             
     f.write("queue "+sample+' from '+fileloc+' \n')
     f.close()
 
@@ -78,11 +75,17 @@ if __name__ == '__main__':
     confirm()
     for datamc in datamcs:
         for year in years:
-            yshort    = year.replace("20","")
             if "20" not in year: year = "20"+year
             if "16" in year: 
-                hipms = ["_noHIPM", "_HIPM"]
+                if "nohipm" in year.lower(): 
+                    hipms = ["_noHIPM"]
+                    year  = "2016"
+                elif "hipm" in year.lower(): 
+                    hipms = ["_HIPM"]
+                    year  = "2016"
+                else                       : hipms = ["_noHIPM", "_HIPM"]
             else: hipms = [""]
+            yshort    = year.replace("20","")
             for hipm in hipms:
                 for lep in leps:
                     if "e" in lep.lower(): lep = "Ele"
@@ -96,13 +99,23 @@ if __name__ == '__main__':
                     arguments   = datamc+" "+year+hipm+" "+lep
                     sample      = arguments.replace(" ","")+NLO
                     jobfolder   = "./Condor"
-                    logfile     = jobfolder + '/log_'+sample+".log"
-                    subfilename = jobfolder + '/sub_'+sample+".sub"
-                    flistname   = jobfolder+'/joblist' +sample+'.txt'
+                    if len(sys.argv)>4:
+                        logfile     = jobfolder + '/log_'     + sample+".log"
+                        subfilename = jobfolder + '/sub_'     + sample+".sub"
+                        flistname   = jobfolder + '/joblist_' + sys.argv[4].replace('.root','.txt')
+                        sampleloc   = fol_name+sys.argv[4]
+                        
+                    else:
+
+                        logfile     = jobfolder + '/log_'    + sample+".log"
+                        subfilename = jobfolder + '/sub_'    + sample+".sub"
+                        flistname   = jobfolder +'/joblist_' + sample+'.txt'
+                        sampleloc   = fol_name+LO
+
                     os.system("mkdir -p "+jobfolder+"/"+sample)
-                    #print os.system("ls "+fol_name+LO), "ls "+ fol_name+LO
                     os.system('rm -f '+flistname)
-                    os.system("ls "+fol_name+LO+">> "+flistname)
+                    os.system("ls "+sampleloc+">> "+flistname)
+
                     logtitle(logfile,"fileset")
                     logline =   "Input args:\t"+ arguments 
                     logline+= "\nSub file  :\t"+ subfilename
