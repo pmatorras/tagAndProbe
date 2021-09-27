@@ -48,7 +48,6 @@ def getinputs():
     allyears = ["2016", "2017", "2018"]  
     allLeps  = ["Ele" , "Muon"]
     NLO      = ''
-    LO       = '' 
     
     if len(sys.argv)<4:
         if "all" in sys.argv[-1]:
@@ -57,7 +56,7 @@ def getinputs():
             if(len(sys.argv)<3): datamcs = alltypes
             else: datamcs = sys.argv[1] 
         else:
-            print 'Please, specify Sample, number of events and file location, in that order'
+            print 'Please, specify data/mc, year and lepton, in that order'
             sys.exit()
     else:
         datamcs = sys.argv[1]
@@ -77,6 +76,17 @@ def getinputs():
         
     return datamcs, years, leps, NLO
 
+def addHipm(year):
+    if "16" in year: 
+        if "nohipm" in year.lower(): 
+            hipms = ["_noHIPM"]
+            year  = "2016"
+        elif "hipm" in year.lower(): 
+            hipms = ["_HIPM"]
+            year  = "2016"
+        else: hipms = ["_noHIPM", "_HIPM"]
+    else: hipms = [""]
+    return hipms
 
 if __name__ == '__main__':    
     datamcs, years, leps, NLO = getinputs()
@@ -86,18 +96,11 @@ if __name__ == '__main__':
     for datamc in datamcs:
         for year in years:
             if "20" not in year: year = "20"+year
-            if "16" in year: 
-                if "nohipm" in year.lower(): 
-                    hipms = ["_noHIPM"]
-                    year  = "2016"
-                elif "hipm" in year.lower(): 
-                    hipms = ["_HIPM"]
-                    year  = "2016"
-                else                       : hipms = ["_noHIPM", "_HIPM"]
-            else: hipms = [""]
             yshort    = year.replace("20","")
+            hipms = addHipm(year)
             for hipm in hipms:
                 for lep in leps:
+                    LO       = '' 
                     if "e" in lep.lower(): lep = "Ele"
                     if "m" in lep.lower(): lep = "Muon"
                     if "data" in datamc.lower(): 
@@ -138,7 +141,7 @@ if __name__ == '__main__':
                     commandtorun = "condor_submit "+subfilename+" >> "+logfile
 
 
-                    os.system(commandtorun)
+                    #os.system(commandtorun)
                     print "jobs sent:\n", commandtorun
                     writetolog(logfile,"----------------------------------")
                     print "JOBS SENT\nlog file :\t"+logfile,"\nsub file :\t"+subfilename,"\njob list :\t"+flistname+"\nArguments:\t"+arguments

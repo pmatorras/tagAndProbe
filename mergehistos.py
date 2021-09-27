@@ -41,7 +41,7 @@ if __name__ == '__main__':
                             command = cmsenv+"; hadd -f "+fol_hadd+"merge_"+year+hipm+lep+".root "+sel_hadd[0]+sel_hadd[1]
                             if len(sel_hadd) == 3: 
                                 command+=sel_hadd[2]
-                            else: 
+                            elif len(sel_hadd)>3: 
                                 print "too many files, exiting..."
                                 exit()
                             print command
