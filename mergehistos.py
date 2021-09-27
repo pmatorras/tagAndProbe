@@ -31,7 +31,7 @@ if __name__ == '__main__':
                         all_hadd = os.listdir(fol_hadd)
                         sel_hadd = []
                         for haddf in all_hadd:
-                            if year not in haddf or lep not in haddf or hipm not in haddf: continue
+                            if year not in haddf or lep not in haddf or hipm not in haddf or "merge" in haddf: continue
                             sel_hadd.append(fol_hadd+haddf+" ")
                         print "selected files", sel_hadd
                         if len(sel_hadd)<2:
