@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np                
 import optparse
 import sys, os
-from mergehistos import confirm
+from mergehistos import *
 cmsenv   = ' eval `scramv1 runtime -sh` '
 fol_base = '/eos/cms/store/group/phys_higgs/cmshww/amassiro/HWWNano/'
 
@@ -39,7 +39,7 @@ def makeSubFile2(filename,folder,arguments, sample, fileloc):#year,tag,sigset,fi
     f.write("log                   = "+folder+"/"+sample+"/job$(Process).log\n")         
     #f.write("+JobFlavour           = workday\n")
     #f.write("+JobFlavour           = tomorrow\n")                                             
-    f.write("+JobFlavour           = testmatch \n")                                             
+    f.write("+JobFlavour           = nextweek \n")                                             
     f.write("queue "+sample+' from '+fileloc+' \n')
     f.close()
 
