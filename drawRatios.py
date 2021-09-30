@@ -13,10 +13,12 @@ if __name__ == '__main__':
     else:
         years = ["2018"]
         leps  = ["Ele"]
+        
     
-    print "Making plots for",datamcs, years, leps, "and", NLO
-    #confirm()
+    print "Making plots for", years, leps
+    confirm()
 
+    c1 = TCanvas( 'c1', 'Ratio plot', 200,10, 1600, 900 )
     for year in years:
         hipms = addHipm(year)
         for hipm in hipms:
@@ -33,20 +35,51 @@ if __name__ == '__main__':
                 
                 print "input sample", sampleloc
 
-                c1 = TCanvas( 'c1', 'Ratio plot', 200,10, 1600, 900 )
 
                 for syst in lep_syst:
                     if "Muon" in lep and "NLO" in syst: continue
-                    hfolder   = 'Histograms/'+syst+'/'
+                    hfolder   = 'Histograms/'+year+"/"+syst+'/'
                     os.system("mkdir -p "+hfolder)
 
-                    print "systematic",syst
+                    print "SYSTEMATIC",syst
                     systD =syst
                     if "NLO" in syst: systD = 'central' 
-                    hbaseData  =  hsample.Get("data"+sample+"base"+systD)
-                    hallData   =  hsample.Get("data"+sample+"all" +systD)
-                    hbaseMC    =  hsample.Get(  "mc"+sample+"base"+syst)
-                    hallMC     =  hsample.Get(  "mc"+sample+"all" +syst)
+                    for M in ["","M"]:
+                        hbaseData  =  hsample.Get("data"+sample+"base"+M+systD)
+                        hallData   =  hsample.Get("data"+sample+"all" +M+systD)
+                        hbaseMC    =  hsample.Get(  "mc"+sample+"base"+M+syst)
+                        hallMC     =  hsample.Get(  "mc"+sample+"all" +M+syst)
+
+                        heffData   =  hallData.Clone("halleffData" +M+syst)
+                        heffMC     =  hallMC.Clone("halleffMC" +M+syst)
+
+                        hist_type = "colz text"
+                        labels    = syst+";#eta; p_{T}"
+                        if "M" in M: 
+                            hist_type = ''
+                            labels    = syst+" Mass ; p_{T}"
+                            
+                        heffData.Divide(hbaseData)
+                        heffData.SetTitle("allcuts/basecuts (Data) "+labels)
+                        heffData.Draw(hist_type)
+                        heffData.Write()
+                        c1.SaveAs(hfolder+"eff_"+sample+M+syst+"_Data.png")
+                        heffMC.Divide(hbaseMC)
+                        heffMC.SetTitle("allcuts/basecuts (MC) "+labels)
+                        heffMC.Draw(hist_type)
+                        heffMC.Write()
+                        c1.SaveAs(hfolder+"eff_"+sample+M+syst+"_MC.png")
+
+
+                        hSFDataMC  = heffData.Clone("hSFDataMC"+M+syst)
+                        hSFDataMC.Divide(heffMC)
+                        hSFDataMC.SetTitle("SF eff_{data}/eff_{mc} "+labels)
+                        hSFDataMC.Draw(hist_type)
+                        hSFDataMC.Write()
+                        c1.SaveAs(hfolder+"SF_"+sample+M+syst+"_DataMC.png")
+
+                     
+                    '''
                     hbaseratio =  hbaseData.Clone("hbaseratio" +syst)
                     hallratio =  hbaseData.Clone("hallratio" +syst)
                     hbaseratio.Divide(hbaseMC)
@@ -57,12 +90,14 @@ if __name__ == '__main__':
                     hallratio.Draw("colz text")
                     hallratio.Write()
                     c1.SaveAs(hfolder+"ratio_"+sample+syst+"_all.png")
-
+                    '''
     www = os.getenv('WWW')
     wloc = www+'/susy/tagAndProbe'
     os.system('mkdir -p '+wloc)
     os.system('cp -r Histograms '+wloc)
     os.system('cp '+www+'/index.php '+wloc+"/Histograms/")
-    for syst in lep_syst:
-        os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+syst+"/")
+    for year in years:
+        for syst in lep_syst:
+            os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+"/")
+            os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+"/"+syst+"/")
     
