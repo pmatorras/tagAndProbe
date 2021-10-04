@@ -72,7 +72,9 @@ def getinputs():
         if "all" in leps.lower(): leps = allLeps
         else: leps = leps.split("-")
         if len(sys.argv)>4 and "nlo" in sys.argv[4].lower(): NLO="NLO"
-
+        
+        for idx, year in enumerate(years): 
+            if "20" not in year: years[idx] = "20"+year
         
     return datamcs, years, leps, NLO
 
@@ -112,7 +114,7 @@ if __name__ == '__main__':
                     arguments   = datamc+" "+year+hipm+" "+lep
                     sample      = arguments.replace(" ","")+NLO
                     jobfolder   = "./Condor"
-                    if len(sys.argv)>4 and "nlo" not in sys.argv[4]:
+                    if len(sys.argv)>4 and "NLO" not in sys.argv[4]:
                         logfile     = jobfolder + '/log_'     + sample+".log"
                         subfilename = jobfolder + '/sub_'     + sample+".sub"
                         flistname   = jobfolder + '/joblist_' + sys.argv[4].replace('.root','.txt')
@@ -128,7 +130,7 @@ if __name__ == '__main__':
                     os.system("mkdir -p "+jobfolder+"/"+sample)
                     os.system('rm -f '+flistname)
                     os.system("ls "+sampleloc+">> "+flistname)
-
+                    
                     logtitle(logfile,"fileset")
                     logline =   "Input args:\t"+ arguments 
                     logline+= "\nSub file  :\t"+ subfilename
@@ -141,7 +143,7 @@ if __name__ == '__main__':
                     commandtorun = "condor_submit "+subfilename+" >> "+logfile
 
 
-                    #os.system(commandtorun)
+                    os.system(commandtorun)
                     print "jobs sent:\n", commandtorun
                     writetolog(logfile,"----------------------------------")
                     print "JOBS SENT\nlog file :\t"+logfile,"\nsub file :\t"+subfilename,"\njob list :\t"+flistname+"\nArguments:\t"+arguments

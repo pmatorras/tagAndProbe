@@ -16,7 +16,7 @@ if __name__ == '__main__':
         
     
     print "Making plots for", years, leps
-    confirm()
+    #confirm()
 
     c1 = TCanvas( 'c1', 'Ratio plot', 200,10, 1600, 900 )
     for year in years:
@@ -27,7 +27,7 @@ if __name__ == '__main__':
                 lep_syst["centralNLO"] = "centralNLO"
                 sample    = year+lep
                 samplenm  = year+hipm+lep
-                samplefol = "Output/hadd/"
+                samplefol = "b_Output/hadd/"
                 outputnm  = samplefol+"ratio_"+samplenm+".root"
                 sampleloc = samplefol+"merge_"+samplenm+".root"
                 hsample   = TFile(sampleloc,"READ","input_file")
@@ -49,48 +49,38 @@ if __name__ == '__main__':
                         hallData   =  hsample.Get("data"+sample+"all" +M+systD)
                         hbaseMC    =  hsample.Get(  "mc"+sample+"base"+M+syst)
                         hallMC     =  hsample.Get(  "mc"+sample+"all" +M+syst)
-
-                        heffData   =  hallData.Clone("halleffData" +M+syst)
-                        heffMC     =  hallMC.Clone("halleffMC" +M+syst)
+                        
+                        print  "getting", hallData, "data"+sample+"base"+M+systD
+                        heffData   =  hallData.Clone("heffData" +M+syst)
+                        heffMC     =  hallMC.Clone("heffMC" +M+syst)
 
                         hist_type = "colz text"
                         labels    = syst+";#eta; p_{T}"
+                        Mstr      = ''
                         if "M" in M: 
                             hist_type = ''
                             labels    = syst+" Mass ; p_{T}"
-                            
+                            Mstr      = "_Mass"
                         heffData.Divide(hbaseData)
-                        heffData.SetTitle("allcuts/basecuts (Data) "+labels)
+                        heffData.SetTitle(year+" allcuts/basecuts (Data) "+labels)
                         heffData.Draw(hist_type)
                         heffData.Write()
-                        c1.SaveAs(hfolder+"eff_"+sample+M+syst+"_Data.png")
+                        c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_Data.png")
                         heffMC.Divide(hbaseMC)
-                        heffMC.SetTitle("allcuts/basecuts (MC) "+labels)
+                        heffMC.SetTitle(year+" allcuts/basecuts (MC) "+labels)
                         heffMC.Draw(hist_type)
                         heffMC.Write()
-                        c1.SaveAs(hfolder+"eff_"+sample+M+syst+"_MC.png")
+                        c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_MC.png")
 
 
-                        hSFDataMC  = heffData.Clone("hSFDataMC"+M+syst)
+                        hSFDataMC  = heffData.Clone(year+" hSFDataMC"+M+syst)
                         hSFDataMC.Divide(heffMC)
-                        hSFDataMC.SetTitle("SF eff_{data}/eff_{mc} "+labels)
+                        hSFDataMC.SetTitle(year+" SF eff_{data}/eff_{mc} "+labels)
                         hSFDataMC.Draw(hist_type)
                         hSFDataMC.Write()
-                        c1.SaveAs(hfolder+"SF_"+sample+M+syst+"_DataMC.png")
+                        c1.SaveAs(hfolder+"SF_"+sample+syst+Mstr+"_DataMC.png")
 
                      
-                    '''
-                    hbaseratio =  hbaseData.Clone("hbaseratio" +syst)
-                    hallratio =  hbaseData.Clone("hallratio" +syst)
-                    hbaseratio.Divide(hbaseMC)
-                    hbaseratio.Draw("colz text")
-                    hbaseratio.Write()
-                    c1.SaveAs(hfolder+"ratio_"+sample+syst+"_base.png")
-                    hallratio.Divide(hbaseMC)
-                    hallratio.Draw("colz text")
-                    hallratio.Write()
-                    c1.SaveAs(hfolder+"ratio_"+sample+syst+"_all.png")
-                    '''
     www = os.getenv('WWW')
     wloc = www+'/susy/tagAndProbe'
     os.system('mkdir -p '+wloc)

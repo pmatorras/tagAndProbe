@@ -26,6 +26,17 @@ else:
     os.system(cmsenv)
 
 
+def lepCuts(lepnm, lep):
+    passCuts = False
+    if  lep.pt >10 and lep.eta < 2.4 and lep.sip3d<4 and lep.dxy <0.05 and lep.dz<0.10:
+        if "M" in lepnm and lep.looseId ==1 and lep.pfRelIso04_all <0.4: 
+            passCuts = True
+        elif "E" in lepnm and lep.cutBased>=1:
+            passCuts = True
+    return passCuts
+
+
+
 if __name__ == '__main__':
 
     if len(sys.argv)<4:
@@ -92,7 +103,7 @@ if __name__ == '__main__':
     hsample   = TFile(sampleloc,"READ","input_file")
     foutput   = TFile(outputnm, "RECREATE", "output_file")
     events    = hsample.Get("Events")
-    #nEntries  = 1000
+    #nEntries  = 50
     nEntries  =  events.GetEntries()
     ptcut     = 20
     if lep is "Muon": ptcut = 15
@@ -100,9 +111,12 @@ if __name__ == '__main__':
     sip3Dcut  = 4
     dxycut    = 0.05
     dzcut     = 0.1
+    print "lep", lep
     for syst in lep_syst:
+        print lep 
         if lep is "Muon":
             lepnm    = lep
+            oplepnm  = "Electron"
             if "TnP_m" in syst:
                 min_mass = lep_syst[syst][0]
                 max_mass = lep_syst[syst][1]
@@ -111,6 +125,7 @@ if __name__ == '__main__':
                 max_mass = 130
         else:
             lepnm    = "Electron"
+            oplepnm  = "Muon"
             min_mass =  60
             max_mass = 120
 
@@ -130,38 +145,52 @@ if __name__ == '__main__':
             else:             nlep = events.nElectron
 
             #pick which lep is the corresponding to probe
-            eveHit    = -1
+            eveProbe = -1
+            eveTag   = -1
             for ilep in range(0,nlep):
-                if leptons[ilep].pt == events.Probe_pt: eveHit = ilep
-            if eveHit == -1:
-                print "no match, continue"
+                if leptons[ilep].pt == events.Probe_pt: eveProbe = ilep
+                if leptons[ilep].pt == events.Tag_pt  : eveTag   = ilep
+                #print "Pt2",lepnm, leptons[ilep].pt, events.Probe_pt, events.Tag_pt
+            if eveProbe == -1 or eveTag ==-1:
+                if eveProbe ==-1: print "no match for probe, continue"
+                if eveTag   ==-1: print "no match for tag  , continue"
                 continue
 
-            lep_pt    = leptons[eveHit].pt
-            lep_pt    = leptons[eveHit].pt
-            lep_eta   = leptons[eveHit].eta
-            lep_sip3D = leptons[eveHit].sip3d
-            lep_dxy   = leptons[eveHit].dxy
-            lep_dz    = leptons[eveHit].dz
+            lep_pt    = leptons[eveProbe].pt
+            lep_pt    = leptons[eveProbe].pt
+            lep_eta   = leptons[eveProbe].eta
+            lep_sip3D = leptons[eveProbe].sip3d
+            lep_dxy   = leptons[eveProbe].dxy
+            lep_dz    = leptons[eveProbe].dz
             tnp_mass  = events.TnP_mass
 
             if   lep is "Ele" :
                 lep_cut  = events.Probe_cutBased
                 if lep_cut < 3 : continue
             elif lep is "Muon" :
-                lep_cut  = leptons[eveHit].mediumId
+                lep_cut  = leptons[eveProbe].mediumId
                 if lep_cut !=1                            : continue
-                if leptons[eveHit].miniPFRelIso_all > 0.15: continue
-                if leptons[eveHit].pfRelIso04_all   > 0.2 : continue
+                #if leptons[eveProbe].miniPFRelIso_all > 0.15: continue
+                if leptons[eveTag].pfRelIso04_all > 0.15 and "tagMu" not in syst : continue
 
             if len([x for x in events.Jet_btagDeepB if x > jetlcut])>0: continue
             if events.TnP_trigger ==0:                                  continue
             if tnp_mass< min_mass or tnp_mass>max_mass:                 continue
 
             if "MET"   in syst and events.TnP_met>lep_syst[syst]                 : continue
-            if "WP90"  in syst and leptons[eveHit].mvaFall17V2Iso_WP90<1         : continue
-            if "nojet" in syst and leptons[eveHit].jetIdx <1                     : continue
-            if "tagMu" in syst and leptons[eveHit].pfRelIso04_all>lep_syst[syst] : continue
+            if "WP90"  in syst and leptons[eveTag  ].mvaFall17V2Iso_WP90<1         : continue
+            if "tagMu" in syst and leptons[eveTag  ].pfRelIso04_all>lep_syst[syst] : continue
+            if "nojet" in syst:
+                jets   = Collection(events,"Jet")
+                oplep  = Collection(events, oplepnm)
+                i_jets = []
+                for idx,     jet in enumerate(   jets):
+                    if jet.pt>30 and jet.eta<4.2: i_jets.append(idx)                
+                for idx,   i_lep in enumerate(leptons):
+                    if lepCuts(  lepnm,   i_lep) is True and   i_lep.jetIdx in i_jets: i_jets.remove(  i_lep.jetIdx)
+                for idx, i_oplep in enumerate(  oplep):
+                    if lepCuts(oplepnm, i_oplep) is True and i_oplep.jetIdx in i_jets: i_jets.remove(i_oplep.jetIdx)
+                if len(i_jets)>0: continue
 
             Ncutb    += 1
             if "mc" in datamc: weight = PUweights[int(events.Pileup_nTrueInt),1]
@@ -173,9 +202,9 @@ if __name__ == '__main__':
 
             if lep_pt    < ptcut  or abs(lep_eta) > etacut: continue
             if lep_dxy   > dxycut or lep_dz       > dzcut : continue
-            if lep_sip3D < sip3Dcut:                        continue
+            if lep_sip3D > sip3Dcut:                        continue
             if lep is "Ele":
-                lep_lostH = leptons[eveHit].lostHits
+                lep_lostH = leptons[eveProbe].lostHits
                 if lep_lostH != 0 :                      continue
             Nallcuts += 1
             hallcuts.Fill(lep_eta, lep_pt,weight)
@@ -188,4 +217,4 @@ if __name__ == '__main__':
         hallcuts.Write()
         hallmass.Write()
 
-    print "finished..."
+    print "Finished running."
