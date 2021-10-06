@@ -64,7 +64,8 @@ if __name__ == '__main__':
                 hallMC_cen     =  hsample.Get(  "mc"+sample+"allcentral")
                 heffData_cen   =  hallData_cen.Clone("heffDatacentral")
                 heffMC_cen     =  hallMC_cen.Clone("heffMCcentral")
-                            
+                done_tnpmass   = False
+                done_muontag   = False
                 heffData_cen.Divide(hbaseData_cen)
                 heffMC_cen.Divide(hbaseMC_cen)
                 hSFDataMC_cen  = heffData_cen.Clone(year+" hSFDataMCcentral")
@@ -75,7 +76,7 @@ if __name__ == '__main__':
                     hfolder   = folbase+syst+'/'
                     os.system("mkdir -p "+hfolder)
                     #if "central" not in syst: continue 
-                    print "SYSTEMATIC",syst
+                    print "DOING SYSTEMATIC",syst
                     systD =syst
                     if "NLO" in syst: 
                         continue
@@ -86,7 +87,7 @@ if __name__ == '__main__':
                         hbaseMC    =  hsample.Get(  "mc"+sample+"base"+M+syst)
                         hallMC     =  hsample.Get(  "mc"+sample+"all" +M+syst)
                         
-                        print  "getting", hallData, "data"+sample+"base"+M+systD
+                        #print  "getting", hallData, "data"+sample+"base"+M+systD
                         heffData   =  hallData.Clone("heffData" +M+syst)
                         heffMC     =  hallMC.Clone("heffMC" +M+syst)
 
@@ -101,12 +102,12 @@ if __name__ == '__main__':
                         heffData.SetTitle(year+" allcuts/basecuts (Data) "+labels)
                         heffData.Draw(hist_type)
                         heffData.Write()
-                        c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_Data.png")
+                        #c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_Data.png")
                         heffMC.Divide(hbaseMC)
                         heffMC.SetTitle(year+" allcuts/basecuts (MC) "+labels)
                         heffMC.Draw(hist_type)
                         heffMC.Write()
-                        c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_MC.png")
+                        #c1.SaveAs(hfolder+"eff_"+sample+syst+Mstr+"_MC.png")
 
                         if syst != "central":
                             hSFDataMC  = heffData.Clone(year+" hSFDataMC"+M+syst)
@@ -114,15 +115,26 @@ if __name__ == '__main__':
                             hSFDataMC.SetTitle(year+" SF eff_{data}/eff_{MC} "+labels)
                             hSFDataMC.Draw(hist_type)
                             hSFDataMC.Write()
-                            c1.SaveAs(hfolder+"SF_"+sample+syst+Mstr+"_DataMC.png")
+                            #c1.SaveAs(hfolder+"SF_"+sample+syst+Mstr+"_DataMC.png")
 
                         heffDataerr = heffData.Clone(year+"heffDataerr" +M+syst)
                         heffMCerr   = heffMC.Clone(  year+"heffMCerr"   +M+syst)
                         if "M" in M: continue
 
-
+    
                         if "MET50" in syst: continue
-                        print "\nim about to calculate the plots\n", syst
+                        passeschecks = False
+                        #print done_muontag, done_tnpmass, "syst", syst, bool("tagMu" in syst)
+                        if (done_muontag and "tagMu" in syst) or (done_tnpmass and "TnP_m" in syst):
+                            passeschecks = True
+                            if   "TnP_m" in syst: othersyst = othersystmass
+                            elif "tagMu" in syst: othersyst = othersystMtag
+                            else:
+                                print "something is wrong, check it out"
+                                exit()
+
+                        #print "\nim about to calculate the plots\n"
+                        #print syst, done_tnpmass, done_muontag
                         for i in range(1,hSFerr.GetNbinsX() + 1):
                             for j in range(1,hSFerr.GetNbinsY() + 1):
                                 allerr_iSF  = hSFerr.GetBinContent(i,j)
@@ -137,15 +149,30 @@ if __name__ == '__main__':
                                     allstat_iSF = hSFstaterr.GetBinContent(i,j)
                                     hSFstaterr.SetBinContent(i,j, allstat_iSF+err_SF)
                                 else:
+                                    #if "TnP_m" in syst and done_tnpmass is True:
                                     central_iSF = hSFDataMC_cen.GetBinContent(i,j)
                                     syst_iSF    = hSFDataMC.GetBinContent(i,j)
                                     syst_allSF  = hSFsysterr.GetBinContent(i,j)
+                                    
                                     if syst_iSF>0: syst_idiff  = (central_iSF-syst_iSF)**2
                                     else         : syst_idiff  = 0
+                                    
+                                    #if "":
+                                    if "tagMu" in syst or "TnP_m" in syst:
+                                        if passeschecks:
+                                            otherSF     = foutput.Get(year+" hSFDataMC"+M+othersyst)
+                                            other_idiff = (central_iSF-otherSF.GetBinContent(i,j))**2
+                                            syst_idiff  =  max(syst_idiff, other_idiff)
+                                        else: 
+                                            syst_idiff  = 0
                                     #if j==5: print "syst", i,j, np.sqrt(syst_idiff)
                                     hSFsysterr.SetBinContent(i,j,syst_allSF+syst_idiff)
-                                    
-
+                    if "TnP_m" in syst: 
+                        done_tnpmass  = True
+                        othersystmass = "TnP_m"+syst[-1]
+                    if "tagMu" in syst: 
+                        done_muontag  = True
+                        othersystMtag = "tagMu"+syst[-1]
                 #do the rest
                 labels   =";#eta;"+lepstr+"p_{T}"
                 fcentral = folbase+"central/"
@@ -167,20 +194,19 @@ if __name__ == '__main__':
                 hSFDataMC_cen.SetTitle(year+" SF eff_{data}/eff_{MC} "+labels)
                 hSFDataMC_cen.Draw("Ecolztext")
                 hSFDataMC_cen.Write()
-                print "THIS ONE!!!"
-                syst = ""
-                c1.SaveAs(fcentral+"SF_"+sample+syst+Mstr+"_DataMC_cen.png")
+                
+                c1.SaveAs(fcentral+"SF_"+sample+Mstr+"_DataMC_cen.png")
                 
                 
                 hSFsysterr.SetTitle(year+" SF syst err eff_{data}/eff_{MC} "+labels)
                 hSFsysterr.Draw("colztext")
-                c1.SaveAs(fcentral+"SF_systerr"+sample+syst+Mstr+"_DataMC.png")
+                c1.SaveAs(fcentral+"SF_systerr"+sample+Mstr+"_DataMC.png")
                 hSFstaterr.SetTitle(year+" SF stat err eff_{data}/eff_{MC} "+labels)
                 hSFstaterr.Draw("colztext")
-                c1.SaveAs(fcentral+"SF_staterr"+sample+syst+Mstr+"_DataMC.png")
+                c1.SaveAs(fcentral+"SF_staterr"+sample+Mstr+"_DataMC.png")
                 hSFerr.SetTitle(year+" SF err eff_{data}/eff_{MC} "+labels)
                 hSFerr.Draw("colztext")
-                c1.SaveAs(fcentral+"SF_err"+sample+syst+Mstr+"_DataMC.png")
+                c1.SaveAs(fcentral+"SF_err"+sample+Mstr+"_DataMC.png")
                                 
 
     print "All systematics processed, now saving it to the web..."
@@ -198,5 +224,5 @@ if __name__ == '__main__':
                     print year, hipm, syst
                     #continue
                     os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+hipm+"/")
-                    os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+hipm+"/"+syst+"/")
+                    os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+hipm+"/"+syst+"/")###
     
