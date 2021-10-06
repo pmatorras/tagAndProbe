@@ -7,10 +7,13 @@ print "starting the code"
 
 cmsenv   = ' eval `scramv1 runtime -sh` '
 user     = os.getenv("USER")
-xEdges   = np.array([ -2.5, -2.0, -1.566, -1.444, -0.8, 0.0, 0.8, 1.444, 1.566, 2.0, 2.5], dtype = 'double')
-yEdges   = np.array([   10,   20,     35,     50,  100, 200], dtype ='double')
-nbinX    = len(xEdges)-1
-nbinY    = len(yEdges)-1
+xEdges   = { "Ele"  : np.array([ -2.5, -2.0, -1.566, -1.444, -0.8, 0.0, 0.8, 1.444, 1.566, 2.0, 2.5], dtype = 'double'), 
+             "Muon" : np.array([ -2.4, -2.1, -0.9, 0, 0.9, 2.1, 2.4], dtype = "double")
+}
+
+yEdges   = { "Ele"  : np.array([   10,   20,     35,     50,  100, 200], dtype ='double'),
+             "Muon" : np.array([ 15, 20, 25, 30, 40, 50, 60, 120], dtype="double")
+}
 hipms    = ["_noHIPM", "_HIPM"]
 NLOstr   = 'LO'
 isNLO    = False
@@ -18,6 +21,7 @@ all_syst = {"Ele"  : {"tagEle"  : "mvaFall17V2Iso_WP90"}, # To be added "NLO": "
             "Muon" : {"tagMu1"  : 0.1,"tagMu3"   : 0.3, "TnP_m1": [75,140], "TnP_m2" : [65,120]},
             "Both" : {"central" : "" ,"TnP_MET30": 30 , "TnP_MET50" : 50, "nojet" : 0}}
 jetlcuts = {"2016_HIPM" : 0.2027 , "2016_noHIPM": 0.1918, "2017" : 0.1355, "2018":0.1208}
+
 
 if "pablinux" in user:
     fol_name = ""
@@ -103,7 +107,7 @@ if __name__ == '__main__':
     hsample   = TFile(sampleloc,"READ","input_file")
     foutput   = TFile(outputnm, "RECREATE", "output_file")
     events    = hsample.Get("Events")
-    #nEntries  = 50
+    #nEntries  = 500
     nEntries  =  events.GetEntries()
     ptcut     = 20
     if lep is "Muon": ptcut = 15
@@ -128,11 +132,14 @@ if __name__ == '__main__':
             oplepnm  = "Muon"
             min_mass =  60
             max_mass = 120
-
+        nbinX    = len(xEdges[lep])-1
+        nbinY    = len(yEdges[lep])-1
+        
+        print "binings used:\n X:", xEdges[lep], "\nY:", yEdges[lep]
         Ncutb     = 0
         Nallcuts  = 0
-        hbasecuts = TH2D(sample+"base" +syst, sample+"base cuts, "  +syst,  nbinX, xEdges, nbinY, yEdges)
-        hallcuts  = TH2D(sample+"all"  +syst, sample+"all cuts, "   +syst,  nbinX, xEdges, nbinY, yEdges)
+        hbasecuts = TH2D(sample+"base" +syst, sample+"base cuts, "  +syst,  nbinX, xEdges[lep], nbinY, yEdges[lep])
+        hallcuts  = TH2D(sample+"all"  +syst, sample+"all cuts, "   +syst,  nbinX, xEdges[lep], nbinY, yEdges[lep])
         hbasemass = TH1D(sample+"baseM"+syst, sample+"base cuts M, "+syst,  40, min_mass, max_mass)
         hallmass  = TH1D(sample+"allM" +syst, sample+"all cuts M, " +syst,  40, min_mass, max_mass)
 

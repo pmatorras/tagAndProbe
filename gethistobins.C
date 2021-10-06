@@ -1,15 +1,25 @@
 {
-  Int_t   nBinX = 5;
-  Int_t   nBinY = 5;
-  Double_t xMin = 0.;
-  Double_t xMax = 1.;
-  Double_t yMin = 0.;
-  Double_t yMax = 1.;
-  char  *filenm = "../LatinoAnalysis/NanoGardener/python/data/scale_factor/Full2017/ElectronScaleFactors_Run2017_SUSY.root";
+  
+  Bool_t isMuon = true;
+  char *filenm = "";
+  char *histname = "";
+  if (isMuon == true){
+    filenm  = "../LatinoAnalysis/NanoGardener/python/data/scale_factor/Full2017v8/Efficiencies_muon_generalTracks_Z_Run2017_UL_ID.root";
+    histname = "NUM_SoftID_DEN_TrackerMuons_abseta_pt_efficiencyData_stat";
 
-  cout<<"filenm:\t"<<filenm<<endl;
-  TFile* hfile = new TFile(filenm,"READ");
-  TH2D*   hist = (TH2D*) hfile->Get("Run2017_CutBasedVetoNoIso94XV1"); 
+  } else{
+    filenm = "../LatinoAnalysis/NanoGardener/python/data/scale_factor/Full2017/ElectronScaleFactors_Run2017_SUSY.root";
+    histname= "Run2017_CutBasedVetoNoIso94XV1";
+
+  }
+  cout<<"filenm:\t"<<filenm<< "hist:\t"<<histname<<endl;
+
+  TFile* hfile = new TFile(filenm,"READ");    
+  TH2D*   hist = (TH2D*) hfile->Get(histname); 
+  Int_t  nBinX = hist->GetNbinsX();
+  Int_t  nBinY = hist->GetNbinsY();
+  cout << "nbinns" << nBinX<< " "<< nBinY<<endl;
+ 
   for (Int_t ibx = 1; ibx <= nBinX; ibx++) {
     for (Int_t iby = 1; iby <= nBinY; iby++) {
       Double_t  xBinMin = hist->GetXaxis()->GetBinLowEdge(ibx);
@@ -24,4 +34,5 @@
       cout << ", content: " << nBinCont << endl;
     }
   }
+
 }

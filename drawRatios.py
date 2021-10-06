@@ -55,9 +55,9 @@ if __name__ == '__main__':
                 foutput   = TFile(outputnm, "RECREATE", "output_file")
                 
                 print "input sample", sampleloc
-                hSFstaterr     = TH2D(sample+"staterr", sample+"staterr, ",  nbinX, xEdges, nbinY, yEdges)
-                hSFsysterr     = TH2D(sample+"systerr", sample+"systerr, ",  nbinX, xEdges, nbinY, yEdges)
-                hSFerr         = TH2D(sample+"err"    , sample+"err, "    ,  nbinX, xEdges, nbinY, yEdges)
+                hSFstaterr     = TH2D(sample+"staterr", sample+"staterr, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
+                hSFsysterr     = TH2D(sample+"systerr", sample+"systerr, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
+                hSFerr         = TH2D(sample+"err"    , sample+"err, "    ,  nbinX, xEdges[lep], nbinY, yEdges[lep])
                 hbaseData_cen  =  hsample.Get("data"+sample+"basecentral")
                 hallData_cen   =  hsample.Get("data"+sample+"allcentral")
                 hbaseMC_cen    =  hsample.Get(  "mc"+sample+"basecentral")
