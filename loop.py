@@ -100,15 +100,15 @@ if __name__ == '__main__':
         NLOstr   = "NLO"
     sample    =  datamc+year+lep
     sampleloc = fol_name+samplenm
-    outputfol = "Output/"+sample+NLOstr+hipm
+    outputfol = "Output_test/"+sample+NLOstr+hipm
     outputnm  = outputfol+"/output_"+samplenm
     print " sample ",sampleloc, "being used"
     os.system("mkdir -p "+outputfol) 
     hsample   = TFile(sampleloc,"READ","input_file")
     foutput   = TFile(outputnm, "RECREATE", "output_file")
     events    = hsample.Get("Events")
-    #nEntries  = 500
-    nEntries  =  events.GetEntries()
+    nEntries  = 500
+    #nEntries  =  events.GetEntries()
     ptcut     = 20
     if lep is "Muon": ptcut = 15
     etacut    = 2.4
