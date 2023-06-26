@@ -5,12 +5,13 @@ from       array import array
 gStyle.SetOptStat(0);
 gROOT.SetBatch(True)
 gStyle.SetPaintTextFormat("4.3f");
-NRGBs = 5
-NCont = 255
-stops = array("d",[0.00, 0.34, 0.61, 0.84, 1.00])
-red = array("d",[0.50, 0.50, 1.00, 1.00, 1.00])
-green = array("d",[ 0.50, 1.00, 1.00, 0.60, 0.50])
-blue = array("d",[1.00, 1.00, 0.50, 0.40, 0.50])
+NRGBs  = 5
+maxerr = 0.2 
+NCont  = 255
+stops  = array("d",[0.00, 0.34, 0.61, 0.84, 1.00])
+red    = array("d",[0.50, 0.50, 1.00, 1.00, 1.00])
+green  = array("d",[ 0.50, 1.00, 1.00, 0.60, 0.50])
+blue   = array("d",[1.00, 1.00, 0.50, 0.40, 0.50])
 TColor.CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont)
 gStyle.SetNumberContours(NCont)
 
@@ -37,8 +38,8 @@ def getEff_i(heff, hbase, i,j, isMC=False):
     return val_i,err_i
 
 def sethistos(histo, year,plot_type, subtype, labels, folder, datamc):
-    
-    lep = "Muon"
+    plottext = "colztext" 
+    lep      = "Muon"
     if "Electron"   in labels   : lep  = "Electron"
     titleextra = " "+lep
     if "eff"        in plot_type: titleextra  = "allcuts/basecuts" + titleextra
@@ -49,16 +50,25 @@ def sethistos(histo, year,plot_type, subtype, labels, folder, datamc):
             histo.SetMinimum(0.9)
             histo.SetMaximum(1.05)
         elif "eff" in plot_type:
-            histo.SetMinimum(0.6)
+            histo.SetMinimum(0.0)
             histo.SetMaximum(1.4)
     if plot_type == "SF" or "cen" in subtype: 
         histo.SetTitle(labels)
+        
     else:
         histo.SetTitle(year+" "+plot_type+" "+subtype+" "+titleextra+labels)
-    histo.Draw("colztext")
-    c1.SaveAs(folder+plot_type+"_"+subtype.replace(" ","")+"_"+datamc+lep+".png")
+    if (plot_type == "SF" and "cen" in subtype) or 'eff' in plot_type: plottext+="e"
+    print plottext, plot_type
+    #exit()
+    histo.Draw(plottext)
+    figname= plot_type+"_"+subtype.replace(" ","")+"_"+datamc+".png"
+    c1.SaveAs(folder+lep+"_"+figname)
+    if "SF_cen" in figname:
+        for i in range(1,nbinX+1):
+            for j in range(8,nbinY+1):
+                print "what's this",labels, i,j,histo.GetBinContent(i,j), histo.GetBinError(i,j)
     histo.Write()
-                        
+    
 
 if __name__ == '__main__':
     
@@ -67,7 +77,6 @@ if __name__ == '__main__':
     else:
         years = ["2018"]
         leps  = ["Ele"]
-        
     print "Making plots for", years, leps
     #confirm()
 
@@ -80,8 +89,13 @@ if __name__ == '__main__':
             folbase   = 'Histograms/'+year+hipm+'/'
             print year, hipm
             for lep in leps:
-                nbinX     = len(xEdges[lep])-1
-                nbinY     = len(yEdges[lep])-1
+                #define several interesting variables
+                nbinXhist = len(xEdges[lep])-1
+                nbinYhist = len(yEdges[lep])-1
+                #different numbering to take the overflow into account
+                nbinX     = nbinXhist
+                nbinY     = nbinYhist+1 #different since here we're taking overflow here
+
                 lepstr    = lep+" "
                 if "Ele" in lep: lepstr = "Electron"+" "
                 lep_syst  = dict(all_syst[lep], **all_syst["Both"])
@@ -89,21 +103,17 @@ if __name__ == '__main__':
                 sample    = year+lep
                 samplenm  = year+hipm+lep
                 samplefol = "Output/hadd/"
-                outputnm  = samplefol+"ratio_"+samplenm+".root"
+                outputnm  = samplefol+"AdditionalSF_"+samplenm+".root"
                 sampleloc = samplefol+"merge_"+samplenm+".root"
                 hsample   = TFile(sampleloc,"READ","input_file")
                 foutput   = TFile(outputnm, "RECREATE", "output_file")
-                print "input sample", sampleloc, nbinX, xEdges[lep], nbinY, yEdges[lep], lep
-                hbasecuts = TH2D(sample+"base" , sample+"base cuts, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
-                #hSFstaterr     = TH2D(sample+"staterr", sample+"staterr, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
-                hSFstaterr     = TH2D(sample+"staterr", sample+"staterr, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
-                print "so twice per histo", yEdges
-                hSFsysterr     = TH2D(sample+"systerr", sample+"systerr, ",  nbinX, xEdges[lep], nbinY, yEdges[lep])
-                hSFerr         = TH2D(sample+"err"    , sample+"err, "    ,  nbinX, xEdges[lep], nbinY, yEdges[lep])
+                hbasecuts      = TH2D(sample+"base" , sample+"base cuts, ",  nbinXhist, xEdges[lep], nbinYhist, yEdges[lep])
+                hSFstaterr     = TH2D("hSFstaterr"+lep, sample+"staterr, ",  nbinXhist, xEdges[lep], nbinYhist, yEdges[lep])
+                hSFsysterr     = TH2D("hSFsysterr"+lep, sample+"systerr, ",  nbinXhist, xEdges[lep], nbinYhist, yEdges[lep])
+                hSFerr         = TH2D("hSFerr"    +lep, sample+"err, "    ,  nbinXhist, xEdges[lep], nbinYhist, yEdges[lep])
                 hbaseData_cen  =  hsample.Get("data"+sample+"basecentral")
                 hallData_cen   =  hsample.Get("data"+sample+"allcentral")
                 hbaseMC_cen    =  hsample.Get(  "mc"+sample+"basecentral")
-                print "maybe"
                 hallMC_cen     =  hsample.Get(  "mc"+sample+"allcentral")
                 heffData_cen   =  hallData_cen.Clone("heffDatacentral")
                 heffMC_cen     =  hallMC_cen.Clone("heffMCcentral")
@@ -111,14 +121,15 @@ if __name__ == '__main__':
                 done_muontag   = False
                 heffData_cen.Divide(hbaseData_cen)
                 heffMC_cen.Divide(hbaseMC_cen)
-                hSFDataMC_cen  = heffData_cen.Clone(year+" hSFDataMCcentral")
+                hSFDataMC_cen  = heffData_cen.Clone("hSFDataMC_central")
                 hSFDataMC_cen.Divide(heffMC_cen)
-
+                print nbinX, xEdges[lep], yEdges[lep]
+                #exit()
                 for syst in lep_syst:
                     if "Muon" in lep and "NLO" in syst: continue
                     hfolder   = folbase+syst+'/'
                     os.system("mkdir -p "+hfolder)
-                    #if "central" not in syst: continue 
+                    #if "nojet" not in syst: continue
                     print "DOING SYSTEMATIC",syst
                     systD =syst
                     if "NLO" in syst: 
@@ -137,30 +148,41 @@ if __name__ == '__main__':
                         hist_type = "colz text"
                         labels    = ";#eta;"+lepstr+"p_{T}"
                         Mstr      = ''
+                        heffData.Divide(hbaseData)
+                        heffMC.Divide(hbaseMC)
                         if "M" in M: 
                             hist_type = ''
                             labels    = syst+" Mass ;"+lepstr+"p_{T}"
                             Mstr      = "_Mass"
-                        heffData.Divide(hbaseData)
-                        heffMC.Divide(hbaseMC)
+                            sethistos(heffData, year,"eff", syst+Mstr, labels,hfolder, "Data")
+                            sethistos(heffMC  , year,"eff", syst+Mstr, labels,hfolder, "MC")
+                            continue
+                        #search for efficiencies where there's not much data
+                        for i in range(1,nbinX+1):
+                            for j in range(1, nbinY+1):
+                                #print i, j
+                                rbaseDataij = 1/hbaseData.GetBinContent(i,j) if hbaseData.GetBinContent(i,j)>0 else 0
+                                rallDataij  = 1/hallData.GetBinContent(i,j)  if hallData.GetBinContent(i,j)>0  else 0
+                                rbaseMCij   = 1/hbaseMC.GetBinContent(i,j)   if hbaseMC.GetBinContent(i,j)>0   else 0
+                                rallMCij    = 1/hallMC.GetBinContent(i,j)    if hallMC.GetBinContent(i,j)>0    else 0
+                                erreffData = heffData.GetBinContent(i,j)*np.sqrt(rbaseDataij+rallDataij)
+                                erreffMC   = heffMC.GetBinContent(i,j)  *np.sqrt(rbaseMCij  +rallMCij  )
+                                heffData.SetBinError(i,j,erreffData)
+                                heffMC.  SetBinError(i,j,erreffMC  )
+                                #if j==8: print "my checks",  nbinX, nbinY, i, j, heffData.GetBinContent(i,j), erreffData, 1/rbaseDataij, 1/rallDataij  
                         sethistos(heffData, year,"eff", syst+Mstr, labels,hfolder, "Data")
                         sethistos(heffMC  , year,"eff", syst+Mstr, labels,hfolder, "MC")
 
-                        if syst != "central" and "M" not in M:
-                            hSFDataMC  = heffData.Clone(year+" hSFDataMC"+syst)
+                        if syst != "central":
+                            hSFDataMC  = heffData.Clone("hSFDataMC"+syst)
                             hSFDataMC.Divide(heffMC)
                             sethistos(hSFDataMC, year,"SF"+syst, Mstr, labels,hfolder, "DataMC")
-                            
-
-                        heffDataerr = heffData.Clone(year+"heffDataerr" +M+syst)
-                        heffMCerr   = heffMC.Clone(  year+"heffMCerr"   +M+syst)
-                        if "M" in M: continue
-
-    
+                            heffDataerr = heffData.Clone(year+"heffDataerr" +M+syst)
+                            heffMCerr   = heffMC.Clone(  year+"heffMCerr"   +M+syst)
+                        
+                        #make sure the systematics are properly taken
                         if "MET50" in syst: continue
                         passeschecks = False
-                        #print "before the checks"
-                        #print done_muontag, done_tnpmass, "syst", syst, bool("tagMu" in syst)
                         if (done_muontag and "tagMu" in syst) or (done_tnpmass and "TnP_m" in syst):
                             passeschecks = True
                             if   "TnP_m" in syst: othersyst = othersystmass
@@ -169,10 +191,10 @@ if __name__ == '__main__':
                                 print "something is wrong, check it out"
                                 exit()
 
-                        #print "\nim about to calculate the plots\n"
-                        #print syst, done_tnpmass, done_muontag
-                        for i in range(1,hSFerr.GetNbinsX() + 2):
-                            for j in range(1,hSFerr.GetNbinsY() + 2):
+                        #stack different parts together to get the SF
+                        for i in range(1,nbinX + 1):
+                            for j in range(1,nbinY + 1):
+    
                                 allerr_iSF  = hSFerr.GetBinContent(i,j)
                                 if "central" in syst and "NLO" not in syst:
                                     val_iMC  , err_iMC   = getEff_i(heffMC,hbaseMC, i,j, True)
@@ -185,24 +207,26 @@ if __name__ == '__main__':
                                     allstat_iSF = hSFstaterr.GetBinContent(i,j)
                                     hSFstaterr.SetBinContent(i,j, allstat_iSF+err_SF)
                                 else:
-                                    #if "TnP_m" in syst and done_tnpmass is True:
                                     central_iSF = hSFDataMC_cen.GetBinContent(i,j)
                                     syst_iSF    = hSFDataMC.GetBinContent(i,j)
                                     syst_allSF  = hSFsysterr.GetBinContent(i,j)
-                                    
                                     if syst_iSF>0: syst_idiff  = (central_iSF-syst_iSF)**2
                                     else         : syst_idiff  = 0
                                     
-                                    #if "":
                                     if "tagMu" in syst or "TnP_m" in syst:
                                         if passeschecks:
-                                            otherSF     = foutput.Get(year+" hSFDataMC"+M+othersyst)
+                                            otherSF     = foutput.Get("hSFDataMC"+M+othersyst)
                                             other_idiff = (central_iSF-otherSF.GetBinContent(i,j))**2
                                             syst_idiff  =  max(syst_idiff, other_idiff)
                                         else: 
                                             syst_idiff  = 0
-                                    #if j==5: print "syst", i,j, np.sqrt(syst_idiff)
-                                    hSFsysterr.SetBinContent(i,j,syst_allSF+syst_idiff)
+                                    
+                                    if  heffData.GetBinError(i,j)>maxerr or heffMC.GetBinError(i,j)>maxerr:
+                                        print "Hello",i,j, heffData.GetBinContent(i,j), heffData.GetBinError(i,j), heffMC.GetBinError(i,j)
+
+                                    else:
+                                        hSFsysterr.SetBinContent(i,j,syst_allSF+syst_idiff)
+                    
                     if "TnP_m" in syst: 
                         done_tnpmass  = True
                         othersystmass = "TnP_m"+syst[-1]
@@ -212,18 +236,17 @@ if __name__ == '__main__':
                 #do the rest
                 labels   =";#eta;"+lepstr+"p_{T}"
                 fcentral = folbase+"central/"
-                for i in range(1,hSFerr.GetNbinsX() + 2):
-                    for j in range(1,hSFerr.GetNbinsY() + 2):
+                for i in range(1,nbinX + 1):
+                    for j in range(1,nbinY + 1):
                         allsysterrsq_i = hSFsysterr.GetBinContent(i,j)
                         allstaterr_i   = hSFstaterr.GetBinContent(i,j)
                         allerr_i       = np.sqrt(allsysterrsq_i+allstaterr_i**2)
-                        #print i, j, allerr_i, allstaterr_i, np.sqrt(allsysterrsq_i)
                         hSFerr.SetBinContent(i,j, allerr_i)
                         hSFDataMC_cen.SetBinError(i,j, allerr_i)
-
+                        if j>5: print j, i, allerr_i, hSFDataMC_cen.GetBinError(i,j)
+                        
                 hSFDataMC_cen.SetMinimum(0.9)
                 hSFDataMC_cen.SetMaximum(1.05)
-                
                 
                 
                 sethistos(hSFDataMC_cen, year,"SF", "cen"     , labels,fcentral, "DataMC")                    
@@ -232,13 +255,14 @@ if __name__ == '__main__':
                 sethistos(hSFerr       , year,"SF", "err"     , labels,fcentral, "DataMC")
                                 
                                 
+    #exit()
 
     print "All systematics processed, now saving it to the web..."
     www = os.getenv('WWW')
     wloc = www+'/susy/tagAndProbe'
     os.system('mkdir -p '+wloc)
     os.system('cp -r Histograms '+wloc)
-    os.system('cp '+www+'/index.php '+wloc+"/Histograms/")
+    os.system('cp '+www+'/susy/V9_Plots/index.php '+wloc+"/Histograms/")
     for year in years:
         hipms = addHipm(year)
         for hipm in hipms:
@@ -246,7 +270,6 @@ if __name__ == '__main__':
                 lep_syst  = dict(all_syst[lep], **all_syst["Both"])
                 for syst in lep_syst:
                     print year, hipm, syst
-                    #continue
-                    os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+hipm+"/")
-                    os.system('cp '+www+'/index.php '+wloc+"/Histograms/"+year+hipm+"/"+syst+"/")###
+                    os.system('cp '+www+'/susy/V9_Plots/index.php '+wloc+"/Histograms/"+year+hipm+"/")
+                    os.system('cp '+www+'/susy/V9_Plots/index.php '+wloc+"/Histograms/"+year+hipm+"/"+syst+"/")###
     
